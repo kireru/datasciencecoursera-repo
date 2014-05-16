@@ -1,0 +1,168 @@
+Peer Assessment 1: Reproducible Research 
+========================================================
+Loading and processing the data
+=================
+
+```{r}
+data<-read.csv( "activity.csv" , header=T, sep= ",")
+```
+Convert date to date class
+
+```{r}
+data$Date <- as.Date(data$date, "%Y-%m-%d")
+```
+Convert interval to a factor
+
+```{r}
+data$interval <- as.factor(data$interval)
+```
+
+Extract levels of 5-min intervals
+```{r}
+lev <- levels(data$interval)
+```
+Average total number of steps taken per day
+```{r fig.width=9, fig.height=8}
+library(plyr)
+totalSteps <- tapply(data$steps, data$date, sum, na.rm=T)
+avgSteps <- tapply(data$steps, data$date, mean, na.rm=T)
+summary(totalSteps)
+summary(avgSteps)
+hist(totalSteps, breaks=10, col="green", main="Total Number of steps each day", xlab="Average Steps per day")
+```
+daily Average  activity pattern
+```{r}
+Steps = tapply(data$steps, data$interval, mean, na.rm=T)
+```
+
+```{r}
+df <- data.frame(Steps, as.numeric(lev))
+```
+draw a ggplot
+```{r fig.width=9, fig.height=6}
+library(ggplot2)
+g <- ggplot(df, aes(as.numeric(lev), Steps))
+g + geom_line(colour="green")+ggtitle("Time Series Plot of the 5-minute Interval\n and the Average Number of Steps,\n Taken across all Days") + ylab("Average Number of Steps")
+```
+Imputing missing values
+======================
+```{r}
+
+missing <- is.na(activity)
+(n.missing <- sum(missing))
+
+# Impute data using the mice (multivariate imputation chains equation)
+library(mice)
+library(Amelia)
+set.seed(144)
+imputedData <- complete(mice(data))
+# Number of total steps each day after imputation
+a.out <- amelia(data, cs="date", m=1)
+# Data frame after imputing
+ a <- a.out$imputations$imp1
+ totStepsImp <- tapply(a$steps, a$date, sum)
+
+
+# Impute by replacing NA by the mean of steps
+data$steps[is.na(data$steps)] <- tapply(data$steps, data$interval, mean, na.rm = TRUE)
+# Number of total steps each day
+totStepsImp <- tapply(data$steps, data$date, sum)
+
+# Summary statistics before and after imputing
+summary(totalSteps)
+summary(totStepsImp)
+```
+
+Impute by replacing NA by the mean of steps
+```{r}
+totstepint<-tapply(data$steps, data$interval, mean, na.rm = TRUE)
+print(totstepint)
+```
+ 
+ cbind(mean(summary$Steps), mean(summary$Steps))
+ 
+ [1,] 10836 10766
+ 
+ plot the 2 graphs for part one and part 2 histogram
+ 
+```{r fig.width=12, fig.height=6}
+par(mfcol=c(1,2))
+hist(totstepint, col="red", xlab="Average Total Number of Steps after Imputing", main="", breaks=10)
+title("Total Number of steps\n each day After Imputing")
+hist(totalSteps, breaks=10, col="green", main="part 1- Total Number of steps each day before imputing", xlab="Average Steps per day")
+```
+
+from the data it is clear that missing values have an effect on the total steps. their is a reduction in steps towards the last days
+
+
+Are there differences in activity patterns between weekdays and weekends?
+=========================================================================
+
+```{r}
+data$Days <- weekdays(as.Date(as.character(data$date)))
+d <- data$Days=="Saturday" | data$Days=="Sunday"
+```
+Call Saturday and Sunday Weekend
+```{r}
+data$Days[d] = "Weekend"
+```
+Call weekdays (Monday through Friday) Weekdays
+```{r}
+data$Days[!d] = "Weekday" 
+activityCopyWD <- data[data$Days == "Weekday",]
+activityCopyWE <- data[data$Days == "Weekend",]
+```
+Convert levels of interval into numeric for weekdays
+```{r}
+IntervalWD <- as.numeric(levels(as.factor(activityCopyWD$interval)))
+IntervalWE <- as.numeric(levels(as.factor(activityCopyWE$interval)))
+avgWD <- tapply(activityCopyWD$steps, activityCopyWD$interval, mean)
+```
+Average number of steps during the weekend
+```{r}
+avgWE <- tapply(activityCopyWE$steps, activityCopyWE$interval, mean)
+dfWD <- data.frame(avgWD, IntervalWD)
+dfWE <- data.frame(avgWE, IntervalWE)
+data$Days <- as.factor(data$Days)
+
+data$interval <- factor(data$interval)
+```
+
+```{r fig.width=10, fig.height=6, echo=T}
+# Use base plot
+plot(dfWD$IntervalWD, dfWD$avgWD, type='l', main="Comparison of the Average Number of Steps\n between Weekdays and the Weekend", xlab="Interval", ylab="Number of Steps")
+lines(dfWE$IntervalWE, dfWE$avgWE, col="red")
+legend("topright", c("Weekday", "Weekend"), col=c("yellow", "red"), lty=1)
+plot(dfWE$IntervalWE, dfWE$avgWE, type='l', main="Weekend", xlab="Interval", ylab="Number of Steps")
+```
+
+using the lattice and drawing the grahps
+
+```{r fig.width=10, fig.height=6, echo=T}
+
+dfWD$wDays <- rep("Weekday", nrow(dfWD))
+dfWE$wDays <- rep("Weekend", nrow(dfWD))
+# Rename column names to match
+colnames(dfWD) <- c("Steps", "Interval", "wDays")
+colnames(dfWE) <- c("Steps", "Interval", "wDays")
+```
+rbind the dataframes
+```{r}
+df <- rbind(dfWD, dfWE)
+```
+Convert wDays column into a factor
+```{r}
+df$wDays <- factor(df$wDays)
+library(lattice)
+xyplot(Steps ~ Interval | wDays, data=df, type='l', layout=c(1,2), ylab="Average Number of Steps")
+```
+ Using ggplot2 package
+```{r fig.width=10, fig.height=6, echo=T}
+g <- ggplot(df, aes(Interval, Steps, fill=wDays, colour=wDays))
+g + geom_line() + labs(colour="") + ggtitle("Comparison of the Average Number of Steps\n between Weekdays and Weekend") + ylab("Average Number of Steps")
+```
+
+
+ 
+ 
+ 
