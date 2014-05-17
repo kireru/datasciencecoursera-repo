@@ -48,15 +48,14 @@ Imputing missing values
 ======================
 ```{r}
 
-missing <- is.na(activity)
+missing <- is.na(data)
 (n.missing <- sum(missing))
 
-# Impute data using the mice (multivariate imputation chains equation)
 library(mice)
 library(Amelia)
 set.seed(144)
 imputedData <- complete(mice(data))
-# Number of total steps each day after imputation
+
 a.out <- amelia(data, cs="date", m=1)
 # Data frame after imputing
  a <- a.out$imputations$imp1
@@ -70,7 +69,9 @@ totStepsImp <- tapply(data$steps, data$date, sum)
 
 # Summary statistics before and after imputing
 summary(totalSteps)
+print(totalSteps)
 summary(totStepsImp)
+print(totStepsImp)
 ```
 
 Impute by replacing NA by the mean of steps
